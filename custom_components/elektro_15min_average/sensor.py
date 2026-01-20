@@ -220,9 +220,10 @@ class PowerIntervalSensor(SensorEntity):
         self._method = entry.options.get(
             CONF_METHOD, entry.data.get(CONF_METHOD, DEFAULT_METHOD)
         )
-        self._precision = entry.options.get(
+        precision = entry.options.get(
             CONF_PRECISION, entry.data.get(CONF_PRECISION, DEFAULT_PRECISION)
         )
+        self._precision = int(precision) if precision is not None else None
         self._custom_name = entry.data.get(CONF_NAME)
 
         self._attr_unique_id = entry.entry_id
