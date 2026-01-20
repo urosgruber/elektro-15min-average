@@ -1,0 +1,9 @@
+{
+  "domain": "elektro_15min_average",
+  "name": "Elektro 15-Minute Average Power",
+  "config_flow": true,
+  "documentation": "https://github.com/urosgruber/elektro-15min-average",
+  "issue_tracker": "https://github.com/urosgruber/elektro-15min-average/issues",
+  "iot_class": "local_push",
+  "version": "0.1.0"
+}

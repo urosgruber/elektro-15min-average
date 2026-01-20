@@ -1,0 +1,6 @@
+{
+  "name": "Elektro 15-Minute Average Power",
+  "content_in_root": false,
+  "domains": ["elektro_15min_average"],
+  "render_readme": true
+}

@@ -1,0 +1,27 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Elektro 15-minute average power",
+        "description": "Create a 15-minute average sensor from a power entity.",
+        "data": {
+          "source_entity": "Source power sensor",
+          "name": "Name (optional)",
+          "average_method": "Average method",
+          "precision": "Decimal precision"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Elektro 15-minute average power",
+        "data": {
+          "average_method": "Average method",
+          "precision": "Decimal precision"
+        }
+      }
+    }
+  }
+}
