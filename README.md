@@ -26,7 +26,6 @@ During setup you can choose:
 - Source power entity (W)
 - Optional name
 - Average method (arithmetic or time-weighted)
-- Decimal precision
 
 ## Attributes
 
@@ -50,6 +49,7 @@ Arithmetic uses the mean of received samples. Time-weighted treats the last valu
 ## Notes
 
 - The integration updates the sensor on each source change and on each 15-minute boundary.
+- Averages are rounded to whole watts.
 - If Home Assistant restarts mid-interval, `restart_detected` is set to true for that interval.
 
 ## Logging
@@ -62,6 +62,17 @@ logger:
   logs:
     custom_components.elektro_15min_average: debug
 ```
+
+## Local development (Podman)
+
+1. Run `bash scripts/podman-run.sh`.
+2. Open `http://localhost:8123` and complete onboarding.
+3. Add the integration via Settings -> Devices & Services.
+
+Notes:
+
+- The script creates a local `ha-config/` folder (gitignored).
+- Code changes are picked up via integration reload or container restart.
 
 ## Release checklist
 

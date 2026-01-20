@@ -18,10 +18,8 @@ from homeassistant.util import dt as dt_util
 from .const import (
     CONF_METHOD,
     CONF_NAME,
-    CONF_PRECISION,
     CONF_SOURCE_ENTITY,
     DEFAULT_METHOD,
-    DEFAULT_PRECISION,
     DOMAIN,
     METHOD_ARITHMETIC,
     METHOD_TIME_WEIGHTED,
@@ -220,10 +218,6 @@ class PowerIntervalSensor(SensorEntity):
         self._method = entry.options.get(
             CONF_METHOD, entry.data.get(CONF_METHOD, DEFAULT_METHOD)
         )
-        precision = entry.options.get(
-            CONF_PRECISION, entry.data.get(CONF_PRECISION, DEFAULT_PRECISION)
-        )
-        self._precision = int(precision) if precision is not None else None
         self._custom_name = entry.data.get(CONF_NAME)
 
         self._attr_unique_id = entry.entry_id
@@ -348,9 +342,7 @@ class PowerIntervalSensor(SensorEntity):
     def _round(self, value: float | None) -> float | None:
         if value is None:
             return None
-        if self._precision is None:
-            return value
-        return round(value, self._precision)
+        return round(value)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

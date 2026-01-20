@@ -7,8 +7,7 @@
         "data": {
           "source_entity": "Source power sensor",
           "name": "Name (optional)",
-          "average_method": "Average method",
-          "precision": "Decimal precision"
+          "average_method": "Average method"
         }
       }
     }
@@ -18,8 +17,7 @@
       "init": {
         "title": "Elektro 15-minute average power",
         "data": {
-          "average_method": "Average method",
-          "precision": "Decimal precision"
+          "average_method": "Average method"
         }
       }
     }

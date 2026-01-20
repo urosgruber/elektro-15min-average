@@ -13,10 +13,8 @@ from homeassistant.helpers import selector
 from .const import (
     CONF_METHOD,
     CONF_NAME,
-    CONF_PRECISION,
     CONF_SOURCE_ENTITY,
     DEFAULT_METHOD,
-    DEFAULT_PRECISION,
     DOMAIN,
     METHOD_ARITHMETIC,
     METHOD_TIME_WEIGHTED,
@@ -35,12 +33,6 @@ def _method_selector() -> selector.SelectSelector:
             ],
             mode=selector.SelectSelectorMode.DROPDOWN,
         )
-    )
-
-
-def _precision_selector() -> selector.NumberSelector:
-    return selector.NumberSelector(
-        selector.NumberSelectorConfig(min=0, max=3, step=1, mode=selector.NumberSelectorMode.SLIDER)
     )
 
 
@@ -64,7 +56,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ),
                 vol.Optional(CONF_NAME): str,
                 vol.Optional(CONF_METHOD, default=DEFAULT_METHOD): _method_selector(),
-                vol.Optional(CONF_PRECISION, default=DEFAULT_PRECISION): _precision_selector(),
             }
         )
 
@@ -95,9 +86,6 @@ class OptionsFlow(config_entries.OptionsFlow):
                 vol.Optional(
                     CONF_METHOD, default=options.get(CONF_METHOD, DEFAULT_METHOD)
                 ): _method_selector(),
-                vol.Optional(
-                    CONF_PRECISION, default=options.get(CONF_PRECISION, DEFAULT_PRECISION)
-                ): _precision_selector(),
             }
         )
 
