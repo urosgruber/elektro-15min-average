@@ -11,9 +11,11 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import (
+    CONF_FINAL_SENSOR,
     CONF_METHOD,
     CONF_NAME,
     CONF_SOURCE_ENTITY,
+    DEFAULT_FINAL_SENSOR,
     DEFAULT_METHOD,
     DOMAIN,
     METHOD_ARITHMETIC,
@@ -22,6 +24,7 @@ from .const import (
 
 
 def _method_selector() -> selector.SelectSelector:
+    # Keep labels user-facing while stored values stay stable for compatibility.
     return selector.SelectSelector(
         selector.SelectSelectorConfig(
             options=[
@@ -45,6 +48,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         if user_input is not None:
             source_entity = user_input[CONF_SOURCE_ENTITY]
+            # Use the source entity as a stable unique_id to avoid duplicates.
             await self.async_set_unique_id(source_entity)
             self._abort_if_unique_id_configured()
             return self.async_create_entry(title=source_entity, data=user_input)
@@ -56,6 +60,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ),
                 vol.Optional(CONF_NAME): str,
                 vol.Optional(CONF_METHOD, default=DEFAULT_METHOD): _method_selector(),
+                # Optional finalized-only sensor for discrete interval history.
+                vol.Optional(
+                    CONF_FINAL_SENSOR, default=DEFAULT_FINAL_SENSOR
+                ): selector.BooleanSelector(),
             }
         )
 
@@ -86,6 +94,10 @@ class OptionsFlow(config_entries.OptionsFlow):
                 vol.Optional(
                     CONF_METHOD, default=options.get(CONF_METHOD, DEFAULT_METHOD)
                 ): _method_selector(),
+                vol.Optional(
+                    CONF_FINAL_SENSOR,
+                    default=options.get(CONF_FINAL_SENSOR, DEFAULT_FINAL_SENSOR),
+                ): selector.BooleanSelector(),
             }
         )
 

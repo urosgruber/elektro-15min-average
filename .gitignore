@@ -1,1 +1,3 @@
 ha-config/
+__pycache__/
+*.pyc

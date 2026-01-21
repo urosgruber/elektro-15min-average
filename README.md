@@ -26,6 +26,7 @@ During setup you can choose:
 - Source power entity (W)
 - Optional name
 - Average method (arithmetic or time-weighted)
+- Optional finalized-only sensor (updates only at 15-minute boundaries)
 
 ## Attributes
 
@@ -49,6 +50,7 @@ Arithmetic uses the mean of received samples. Time-weighted treats the last valu
 ## Notes
 
 - The integration updates the sensor on each source change and on each 15-minute boundary.
+- The optional finalized-only sensor only updates at the boundary for discrete history points.
 - Averages are rounded to whole watts.
 - If Home Assistant restarts mid-interval, `restart_detected` is set to true for that interval.
 
@@ -108,3 +110,4 @@ entities:
 - At a quarter-hour boundary, confirm the interval flips and `interval_start`/`interval_end` move to the next window.
 - Compare arithmetic vs time-weighted by forcing irregular updates (e.g., rapid changes followed by a pause).
 - Restart Home Assistant mid-interval and confirm `restart_detected` becomes true and the interval continues.
+- Enable the finalized-only sensor and verify it only updates at quarter-hour boundaries.
