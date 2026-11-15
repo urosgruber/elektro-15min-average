@@ -18,11 +18,13 @@ from homeassistant.util import dt as dt_util
 from .const import (
     CONF_FINAL_SENSOR,
     CONF_ENTITY_PICTURE,
+    CONF_IMPORT_ONLY,
     CONF_METHOD,
     CONF_NAME,
     CONF_SOURCE_ENTITY,
     DEFAULT_FINAL_SENSOR,
     DEFAULT_ENTITY_PICTURE,
+    DEFAULT_IMPORT_ONLY,
     DEFAULT_METHOD,
     DOMAIN,
     METHOD_ARITHMETIC,
@@ -94,6 +96,12 @@ class IntervalAverager:
         if not data:
             return False
 
+        interval_end = _parse_datetime(data.get("interval_end"))
+        if interval_end is None or interval_end <= dt_util.utcnow():
+            # The stored interval ended while Home Assistant was down. Its
+            # data is incomplete, so start fresh instead of finalizing it.
+            return False
+
         self.interval_start = _parse_datetime(data.get("interval_start"))
         self.interval_end = _parse_datetime(data.get("interval_end"))
         self.sum_values = float(data.get("sum_values", 0.0))
@@ -103,7 +111,9 @@ class IntervalAverager:
         self.last_value = data.get("last_value")
         self.weighted_sum = float(data.get("weighted_sum", 0.0))
         self.weighted_duration = float(data.get("weighted_duration", 0.0))
-        self.last_sample_ts = _parse_datetime(data.get("last_sample_ts"))
+        # The power while Home Assistant was down is unknown. Do not hold the
+        # last value over the downtime; weight again from the next sample.
+        self.last_sample_ts = None
 
         # Mark the interval as potentially partial after restart.
         self.restart_detected = True
@@ -178,14 +188,33 @@ class IntervalAverager:
         self.last_value = value
         self.last_sample_ts = ts
 
-    def current_averages(self) -> IntervalAverages:
-        """Return arithmetic and time-weighted averages for the current interval."""
+    def current_averages(self, until: datetime | None = None) -> IntervalAverages:
+        """Return arithmetic and time-weighted averages for the current interval.
+
+        With ``until``, the time-weighted average also holds the last value
+        from the last sample up to that time (capped at the interval end).
+        """
         arithmetic = None
         time_weighted = None
         if self.sample_count > 0:
             arithmetic = self.sum_values / self.sample_count
-        if self.weighted_duration > 0:
-            time_weighted = self.weighted_sum / self.weighted_duration
+
+        weighted_sum = self.weighted_sum
+        weighted_duration = self.weighted_duration
+        if (
+            until is not None
+            and self.last_value is not None
+            and self.last_sample_ts is not None
+        ):
+            if self.interval_end is not None:
+                until = min(until, self.interval_end)
+            delta = (until - self.last_sample_ts).total_seconds()
+            if delta > 0:
+                weighted_sum += self.last_value * delta
+                weighted_duration += delta
+
+        if weighted_duration > 0:
+            time_weighted = weighted_sum / weighted_duration
         return IntervalAverages(arithmetic=arithmetic, time_weighted=time_weighted)
 
     def _stats_snapshot(self) -> IntervalStats:
@@ -283,6 +312,9 @@ class PowerIntervalSensor(SensorEntity):
             CONF_ENTITY_PICTURE,
             entry.data.get(CONF_ENTITY_PICTURE, DEFAULT_ENTITY_PICTURE),
         )
+        self._import_only = entry.options.get(
+            CONF_IMPORT_ONLY, entry.data.get(CONF_IMPORT_ONLY, DEFAULT_IMPORT_ONLY)
+        )
         self._custom_name = entry.data.get(CONF_NAME)
 
         base_name = self._custom_name or self._default_name()
@@ -300,7 +332,9 @@ class PowerIntervalSensor(SensorEntity):
     async def async_added_to_hass(self) -> None:
         restored = await self._averager.async_restore()
         if restored and self._publish_on_restore:
-            self._update_from_averages(self._averager.current_averages())
+            self._update_from_averages(
+                self._averager.current_averages(until=dt_util.utcnow())
+            )
             self.async_write_ha_state()
 
         state = self._hass.states.get(self._source_entity)
@@ -359,13 +393,25 @@ class PowerIntervalSensor(SensorEntity):
             _LOGGER.debug("Skipping non-numeric state: %s", state.state)
             return
 
-        ts = dt_util.as_utc(state.last_updated)
+        if self._import_only and value < 0:
+            # Export: the meter's import register does not count it.
+            value = 0.0
+
+        # Ignore a state older than the last sample (for example the source's
+        # unchanged state at startup); it must not move the interval back.
+        ts = max(dt_util.as_utc(state.last_updated), self._sample_floor())
         self._averager.add_sample(value, ts)
 
         if self._publish_live:
-            self._update_from_averages(self._averager.current_averages())
+            self._update_from_averages(self._averager.current_averages(until=ts))
             self.async_write_ha_state()
         self._hass.async_create_task(self._averager.async_save())
+
+    def _sample_floor(self) -> datetime:
+        last = self._averager.last_sample_ts
+        start = self._averager.interval_start
+        floors = [t for t in (last, start) if t is not None]
+        return max(floors) if floors else dt_util.as_utc(dt_util.utcnow())
 
     def _default_name(self) -> str:
         source_state = self._hass.states.get(self._source_entity)
@@ -416,6 +462,7 @@ class PowerIntervalSensor(SensorEntity):
             "max_value": self._round(stats_source.max_value),
             "last_value": self._round(stats_source.last_value),
             "source_entity": self._source_entity,
+            "import_only": self._import_only,
             "restart_detected": stats_source.restart_detected,
             "restart_at": _format_datetime(stats_source.restart_at, local=True),
         }

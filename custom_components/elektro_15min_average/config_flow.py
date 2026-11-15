@@ -13,11 +13,13 @@ from homeassistant.helpers import selector
 from .const import (
     CONF_FINAL_SENSOR,
     CONF_ENTITY_PICTURE,
+    CONF_IMPORT_ONLY,
     CONF_METHOD,
     CONF_NAME,
     CONF_SOURCE_ENTITY,
     DEFAULT_FINAL_SENSOR,
     DEFAULT_ENTITY_PICTURE,
+    DEFAULT_IMPORT_ONLY,
     DEFAULT_METHOD,
     DOMAIN,
     METHOD_ARITHMETIC,
@@ -30,11 +32,11 @@ def _method_selector() -> selector.SelectSelector:
     return selector.SelectSelector(
         selector.SelectSelectorConfig(
             options=[
-                {"value": METHOD_ARITHMETIC, "label": "Arithmetic (average of samples)"},
                 {
                     "value": METHOD_TIME_WEIGHTED,
-                    "label": "Time-weighted (average over time)",
+                    "label": "Time-weighted (energy / time, like the meter)",
                 },
+                {"value": METHOD_ARITHMETIC, "label": "Arithmetic (average of samples)"},
             ],
             mode=selector.SelectSelectorMode.DROPDOWN,
         )
@@ -62,6 +64,10 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 ),
                 vol.Optional(CONF_NAME): str,
                 vol.Optional(CONF_METHOD, default=DEFAULT_METHOD): _method_selector(),
+                # Count negative values (export) as 0 W, like the meter's import register.
+                vol.Optional(
+                    CONF_IMPORT_ONLY, default=DEFAULT_IMPORT_ONLY
+                ): selector.BooleanSelector(),
                 # Optional finalized-only sensor for discrete interval history.
                 vol.Optional(
                     CONF_FINAL_SENSOR, default=DEFAULT_FINAL_SENSOR
@@ -99,6 +105,13 @@ class OptionsFlow(config_entries.OptionsFlow):
                 vol.Optional(
                     CONF_METHOD, default=options.get(CONF_METHOD, DEFAULT_METHOD)
                 ): _method_selector(),
+                vol.Optional(
+                    CONF_IMPORT_ONLY,
+                    default=options.get(
+                        CONF_IMPORT_ONLY,
+                        self._entry.data.get(CONF_IMPORT_ONLY, DEFAULT_IMPORT_ONLY),
+                    ),
+                ): selector.BooleanSelector(),
                 vol.Optional(
                     CONF_FINAL_SENSOR,
                     default=options.get(CONF_FINAL_SENSOR, DEFAULT_FINAL_SENSOR),

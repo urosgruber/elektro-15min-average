@@ -8,6 +8,7 @@
           "source_entity": "Source power sensor",
           "name": "Name (optional)",
           "average_method": "Average method",
+          "import_only": "Count only grid import (negative values count as 0 W)",
           "create_final_sensor": "Create finalized-only sensor",
           "entity_picture": "Entity picture URL (optional, defaults to bundled icon)"
         }
@@ -20,6 +21,7 @@
         "title": "Elektro 15-minute average power",
         "data": {
           "average_method": "Average method",
+          "import_only": "Count only grid import (negative values count as 0 W)",
           "create_final_sensor": "Create finalized-only sensor",
           "entity_picture": "Entity picture URL (optional, defaults to bundled icon)"
         }
