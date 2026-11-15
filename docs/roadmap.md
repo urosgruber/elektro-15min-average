@@ -1,5 +1,10 @@
 # Roadmap
 
+## Done in 1.1.1
+
+- The forecast attributes are empty when a tariff block entity sets the block.
+  The 48-hour walk uses real hours across the DST change.
+
 ## Done in 1.1.0
 
 - Tariff block attributes `next_change`, `next_block` and `next_cheap_start`.

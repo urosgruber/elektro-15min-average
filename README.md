@@ -130,8 +130,8 @@ block from then on) and `next_cheap_start` (local ISO time when the next
 block 3, 4 or 5 period starts; empty when the block is already 3, 4 or 5).
 They look 48 hours ahead with the built-in tables. The holiday calendar or
 workday sensor counts for today only; other days use the built-in holiday
-list. A tariff block entity changes only the current block, not these
-forecasts.
+list. With a tariff block entity, all three are empty, because the tables
+cannot forecast an entity.
 
 **Projected 15-minute average:** `interval_end`.
 

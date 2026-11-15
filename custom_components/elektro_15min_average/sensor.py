@@ -166,19 +166,21 @@ class TariffBlockSensor(AverageEntity, SensorEntity):
 
         def working_day(day: date) -> bool:
             # The holiday source gives only the state of today. Other days
-            # use the built-in holiday list. A block entity changes only the
-            # current block, not this forecast.
+            # use the built-in holiday list.
             return today_is_working if day == local.date() else is_working_day(day)
 
-        change = next_change(local, working_day)
-        cheap = next_cheap_start(local, working_day)
+        # A block entity gives the current block, and the tables cannot
+        # forecast it. Then there is no forecast.
+        source = self._tracker.block_source()
+        change = next_change(local, working_day) if source == "calculated" else None
+        cheap = next_cheap_start(local, working_day) if source == "calculated" else None
         self._attr_extra_state_attributes = {
             "next_change": change[0].isoformat() if change else None,
             "next_block": change[1] if change else None,
             "next_cheap_start": cheap.isoformat() if cheap else None,
-            "source": self._tracker.block_source(),
+            "source": source,
             "high_season": is_high_season(local.date()),
-            "working_day": self._tracker.working_day(local),
+            "working_day": today_is_working,
             "agreed_power": _round(self._tracker.agreed_power_now(now)),
         }
 

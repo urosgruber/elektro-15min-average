@@ -147,6 +147,11 @@ async def test_block_entity_overrides(hass: HomeAssistant) -> None:
     await setup(hass, block_entity="select.block")
     assert state(hass, BLOCK).state == "4"
     assert state(hass, BLOCK).attributes["source"] == "entity"
+    # The tables cannot forecast an entity: no forecast at all.
+    attrs = state(hass, BLOCK).attributes
+    assert attrs["next_change"] is None
+    assert attrs["next_block"] is None
+    assert attrs["next_cheap_start"] is None
     hass.states.async_set("select.block", "b2")
     await hass.async_block_till_done()
     assert state(hass, BLOCK).state == "2"

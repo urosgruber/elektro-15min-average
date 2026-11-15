@@ -1,6 +1,7 @@
 """Tests of the tariff block calculation."""
 
 from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -131,3 +132,24 @@ def test_next_cheap_start_ignores_a_cheap_block_now() -> None:
 
 def test_next_change_rounds_down_to_the_quarter() -> None:
     assert next_change(at("2026-11-16 13:59:30")) == (at("2026-11-16 14:00"), 2)
+
+
+LJUBLJANA = ZoneInfo("Europe/Ljubljana")
+
+
+def test_next_change_over_the_spring_dst_change() -> None:
+    # Sunday 29 March 2026: the clock jumps from 02:00 to 03:00.
+    now = datetime(2026, 3, 28, 23, 30, tzinfo=LJUBLJANA)
+    assert next_change(now) == (datetime(2026, 3, 29, 6, tzinfo=LJUBLJANA), 4)
+    change = next_change(now)
+    assert change is not None
+    assert change[0].isoformat() == "2026-03-29T06:00:00+02:00"
+
+
+def test_next_change_over_the_autumn_dst_change() -> None:
+    # Sunday 25 October 2026: the clock goes back from 03:00 to 02:00.
+    now = datetime(2026, 10, 24, 23, 30, tzinfo=LJUBLJANA)
+    change = next_change(now)
+    assert change is not None
+    assert change[0].isoformat() == "2026-10-25T06:00:00+01:00"
+    assert change[1] == 4

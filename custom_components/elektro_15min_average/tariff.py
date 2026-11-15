@@ -8,7 +8,7 @@ day, one digit per hour from 00:00.
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 # Valid up to the end of 2026.
 SCHEDULE_UNTIL_2026 = {
@@ -108,23 +108,31 @@ def _walk(
     """Return the block now and every block start in the next 48 hours.
 
     The walk goes in 15-minute steps from the quarter hour of local. A day
-    that working_day does not know uses the built-in holiday list.
+    that working_day does not know uses the built-in holiday list. With an
+    aware local, the steps are real time (UTC), so 48 hours stay 48 hours
+    over a DST change. The results are in the zone of local.
     """
+    zone = local.tzinfo
+
+    def to_local(moment: datetime) -> datetime:
+        return moment.astimezone(zone) if zone else moment
 
     def block(moment: datetime) -> int:
         day_type = working_day(moment.date()) if working_day else None
         return block_at(moment, day_type)
 
     start = local.replace(minute=local.minute // 15 * 15, second=0, microsecond=0)
+    clock = start.astimezone(UTC) if zone else start
     current = block(start)
     previous = current
     starts: list[tuple[datetime, int]] = []
-    moment = start
-    while moment - start < _HORIZON:
+    moment = clock
+    while moment - clock < _HORIZON:
         moment += _STEP
-        value = block(moment)
+        local_moment = to_local(moment)
+        value = block(local_moment)
         if value != previous:
-            starts.append((moment, value))
+            starts.append((local_moment, value))
             previous = value
     return current, starts
 
