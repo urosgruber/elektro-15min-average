@@ -22,7 +22,7 @@ from .tracker import AverageTracker, store_key
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
 
 type ElektroAverageConfigEntry = ConfigEntry[AverageTracker]
 

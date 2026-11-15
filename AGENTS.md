@@ -19,10 +19,17 @@ keep future iterations consistent, safe, and aligned with HA standards.
 - The average is time-weighted (energy / time), as the meter measures it. Do
   not bring back the arithmetic mean as the state; it is wrong for sources
   that report at an uneven rate. It stays only as an attribute.
-- Three sensors per entry: current average, projected value, last interval.
+- Per entry: current average, projected value, last interval, tariff block,
+  agreed-power warning, monthly peak per block.
   The current and projected values update on source changes and every 10 s.
   None of them may show `unknown` while the source has a value.
 - `import_only` counts negative source values as 0 W (grid export).
+- Tariff blocks: `tariff.py` holds the Energy Agency tables (up to 2026 and
+  from 2027). A block entity overrides the calculation; a holiday calendar or
+  a workday sensor overrides the built-in holiday list. The block of an
+  interval is the block seen up to 60 s before its end.
+- Agreed power per block (kW, non-decreasing from block 1 to 5) drives the
+  binary sensor on the projected value. Monthly peaks per block are stored.
 - Restarts restore the current interval, do not count the downtime, and drop
   a stored interval that already ended. The last interval is stored too.
 
@@ -30,7 +37,9 @@ keep future iterations consistent, safe, and aligned with HA standards.
 - `averager.py`: the interval arithmetic, no Home Assistant state. Test it in
   `tests/test_averager.py`.
 - `tracker.py`: source subscription, boundary and tick timers, storage.
-- `sensor.py`: the three entities; they only read from the tracker.
+- `entity.py`, `sensor.py`, `binary_sensor.py`: the entities; they only read
+  from the tracker.
+- `tariff.py`: blocks, seasons, holidays. Test it in `tests/test_tariff.py`.
 - `config_flow.py`, `__init__.py` (setup and config entry migration),
   `diagnostics.py`, `strings.json` and `translations/` (en, sl).
 - `brand/` holds the icon; `scripts/make_icon.py` draws it.

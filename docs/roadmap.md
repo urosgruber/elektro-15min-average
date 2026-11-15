@@ -1,15 +1,14 @@
 # Roadmap
 
-## Next: agreed power and monthly peaks (agreed 2026-11-15)
+## Done in 1.0.0
 
-1. **Agreed-power warning.** An option for the agreed power (dogovorjena
-   obračunska moč) per tariff block, or an entity that gives the current
-   block. A binary sensor turns on when the projected value goes over the
-   agreed power of the current block, so an automation can warn before the
-   quarter hour ends.
-2. **Monthly peak per block.** Sensors with the highest finished quarter hour
-   of the month, per tariff block when a block entity is set, with the time
-   of the peak. They reset on the 1st of the month and survive a restart.
+- Agreed-power warning per tariff block (binary sensor on the projected value).
+- Monthly peak per tariff block, with the time of the peak.
+- Tariff block: calculated (tables up to 2026 and from 2027), or from an
+  entity. Working days from a holiday calendar or a workday sensor, with a
+  built-in list as the fallback.
 
-Open question: which entity gives the current tariff block on each install
-(home has `sensor.main_daily_energy_new_b1`…`b5`, so a block source exists).
+## Ideas
+
+- A cost estimate of the excess power (presežna moč) when the rules for its
+  price are clear.

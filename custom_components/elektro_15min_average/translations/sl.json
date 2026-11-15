@@ -28,12 +28,30 @@
       "init": {
         "title": "15-minutna povprečna moč",
         "data": {
-          "import_only": "Štej samo prevzem iz omrežja"
+          "import_only": "Štej samo prevzem iz omrežja",
+          "agreed_power_1": "Dogovorjena moč, blok 1",
+          "agreed_power_2": "Dogovorjena moč, blok 2",
+          "agreed_power_3": "Dogovorjena moč, blok 3",
+          "agreed_power_4": "Dogovorjena moč, blok 4",
+          "agreed_power_5": "Dogovorjena moč, blok 5",
+          "day_entity": "Koledar praznikov ali senzor delovnega dne",
+          "block_entity": "Entiteta časovnega bloka"
         },
         "data_description": {
-          "import_only": "Vklopite, če je senzor med oddajo v omrežje (sončna elektrarna) negativen. Negativne vrednosti se potem štejejo kot 0 W."
-        }
+          "import_only": "Vklopite, če je senzor med oddajo v omrežje (sončna elektrarna) negativen. Negativne vrednosti se potem štejejo kot 0 W.",
+          "agreed_power_1": "V kW, z računa za omrežnino ali iz Moj Elektro. Pustite prazno, če za ta blok ne želite opozorila.",
+          "agreed_power_2": "V kW. Ne nižja od prejšnjega bloka.",
+          "agreed_power_3": "V kW. Ne nižja od prejšnjega bloka.",
+          "agreed_power_4": "V kW. Ne nižja od prejšnjega bloka.",
+          "agreed_power_5": "V kW. Ne nižja od prejšnjega bloka.",
+          "day_entity": "Neobvezno. Koledar integracije Holiday (dan z dogodkom je praznik) ali binarni senzor integracije Workday (vklopljen = delovni dan). Brez njega se uporabi vgrajeni seznam slovenskih praznikov.",
+          "block_entity": "Neobvezno. Entiteta, katere stanje je blok, npr. 2 ali b2. Nadomesti izračunani blok. Brez nje integracija izračuna blok iz sezone, dneva in ure."
+        },
+        "description": "Dogovorjena moč sproži opozorilo, ko predvideno 15-minutno povprečje preseže dogovorjeno moč. Časovni blok se izračuna; spodnji entiteti lahko izračun nadomestita."
       }
+    },
+    "error": {
+      "agreed_power_order": "Višji blok ne sme imeti nižje dogovorjene moči kot nižji blok (blok 1 ≤ blok 2 ≤ … ≤ blok 5)."
     }
   },
   "entity": {
@@ -46,6 +64,17 @@
       },
       "last_interval": {
         "name": "Zadnje 15-minutno povprečje"
+      },
+      "tariff_block": {
+        "name": "Časovni blok"
+      },
+      "monthly_peak": {
+        "name": "Mesečni vrh blok {block}"
+      }
+    },
+    "binary_sensor": {
+      "agreed_power_exceeded": {
+        "name": "Presežena dogovorjena moč"
       }
     }
   }

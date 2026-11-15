@@ -19,6 +19,55 @@ Each power sensor that you add gets one device with three sensors:
 The first two sensors update on each change of the source and every 10
 seconds. The last sensor updates at :00, :15, :30 and :45.
 
+## Tariff blocks, agreed power and monthly peaks
+
+The Slovenian network tariff has five time blocks. Block 1 is the most
+expensive. The integration adds these entities:
+
+| Entity | What it shows |
+|---|---|
+| **Tariff block** | The block now (1 to 5). The attributes show the source of the block, the season and whether today is a working day. |
+| **Agreed power exceeded** | On when the projected 15-minute average is above the agreed power of the current block. It is off when the block has no agreed power. The attribute `headroom` shows the margin in W. |
+| **Monthly peak block 1–5** | The highest finished quarter hour of the month in each block, with its time (`peak_start`). It resets on the 1st and keeps its value after a restart. It is unknown until the block has a finished quarter hour in the month (block 1 does not occur from March to October). |
+
+The projected and the last sensor also show `block` and `agreed_power`. The
+last sensor shows `exceeded`.
+
+**How the block is found:**
+
+1. If you set a **tariff block entity** (for example a select with `b1`…`b5`
+   or a sensor with `1`…`5`), its state is used.
+2. Otherwise the integration calculates the block from the season (high
+   season: November to February), the type of day and the hour. It uses the
+   table of the Energy Agency that is valid up to 2026, and from
+   1 January 2027 the new table (act of 29 September 2025, Annex 2).
+
+**Working days:** a block calculation needs to know if today is a working
+day. Set **Holiday calendar or workday sensor** to the calendar of Home
+Assistant's Holiday integration (a day with an event is a holiday) or to the
+binary sensor of the Workday integration (on = working day). Home Assistant
+keeps these up to date. Without it, the integration uses a built-in list of
+Slovenian public holidays.
+
+**Agreed power:** enter it per block in kW in **Configure**. You find it on
+the network bill or in Moj Elektro. A higher block may not have a lower
+agreed power than a lower block.
+
+An automation example that warns before the quarter hour ends:
+
+```yaml
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.grid_agreed_power_exceeded
+    to: "on"
+actions:
+  - action: notify.mobile_app_phone
+    data:
+      message: >
+        The 15-minute power will go over the agreed power
+        ({{ state_attr('binary_sensor.grid_agreed_power_exceeded', 'agreed_power') }} W).
+```
+
 ## How it calculates
 
 The meter divides the energy of the quarter hour by 15 minutes. The
@@ -65,7 +114,8 @@ Home Assistant 2026.2 or newer is necessary.
 | Name | Optional. The default is the name of the power sensor. |
 | Count only grid import | Negative values count as 0 W. Use it for a net grid sensor with solar. |
 
-You can change **Count only grid import** later in **Configure**.
+**Configure** (after setup) also has the agreed power per block, the holiday
+calendar or workday sensor, and the tariff block entity.
 
 ## Attributes
 

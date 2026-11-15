@@ -28,12 +28,30 @@
       "init": {
         "title": "15-minute average power",
         "data": {
-          "import_only": "Count only grid import"
+          "import_only": "Count only grid import",
+          "agreed_power_1": "Agreed power, block 1",
+          "agreed_power_2": "Agreed power, block 2",
+          "agreed_power_3": "Agreed power, block 3",
+          "agreed_power_4": "Agreed power, block 4",
+          "agreed_power_5": "Agreed power, block 5",
+          "day_entity": "Holiday calendar or workday sensor",
+          "block_entity": "Tariff block entity"
         },
         "data_description": {
-          "import_only": "Turn on when the sensor is negative during export (solar). Negative values then count as 0 W."
-        }
+          "import_only": "Turn on when the sensor is negative during export (solar). Negative values then count as 0 W.",
+          "agreed_power_1": "In kW, from your network bill or Moj Elektro. Leave empty if you do not want a warning for this block.",
+          "agreed_power_2": "In kW. Not lower than the block before.",
+          "agreed_power_3": "In kW. Not lower than the block before.",
+          "agreed_power_4": "In kW. Not lower than the block before.",
+          "agreed_power_5": "In kW. Not lower than the block before.",
+          "day_entity": "Optional. The calendar of the Holiday integration (a day with an event is a holiday) or the binary sensor of the Workday integration (on = working day). Without it, the built-in Slovenian holiday list is used.",
+          "block_entity": "Optional. An entity whose state is the block, such as 2 or b2. It overrides the calculated block. Without it, the integration calculates the block from the season, the day and the hour."
+        },
+        "description": "The agreed power gives a warning when the projected 15-minute average goes over it. The tariff block is calculated; the two entities below can replace the calculation."
       }
+    },
+    "error": {
+      "agreed_power_order": "A higher block must not have a lower agreed power than a lower block (block 1 ≤ block 2 ≤ … ≤ block 5)."
     }
   },
   "entity": {
@@ -46,6 +64,17 @@
       },
       "last_interval": {
         "name": "Last 15-minute average"
+      },
+      "tariff_block": {
+        "name": "Tariff block"
+      },
+      "monthly_peak": {
+        "name": "Monthly peak block {block}"
+      }
+    },
+    "binary_sensor": {
+      "agreed_power_exceeded": {
+        "name": "Agreed power exceeded"
       }
     }
   }

@@ -31,6 +31,7 @@ class FinishedInterval:
     max_value: float | None
     coverage: float
     restart_detected: bool
+    block: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Return the stored form."""
@@ -44,6 +45,7 @@ class FinishedInterval:
             "max_value": self.max_value,
             "coverage": self.coverage,
             "restart_detected": self.restart_detected,
+            "block": self.block,
         }
 
     @classmethod
@@ -63,6 +65,7 @@ class FinishedInterval:
             max_value=data.get("max_value"),
             coverage=float(data.get("coverage", 0.0)),
             restart_detected=bool(data.get("restart_detected", False)),
+            block=data.get("block"),
         )
 
 

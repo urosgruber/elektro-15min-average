@@ -10,3 +10,9 @@ CONF_IMPORT_ONLY = "import_only"
 DEFAULT_IMPORT_ONLY = False
 
 STORAGE_VERSION = 1
+
+# Options of the tariff features.
+CONF_BLOCK_ENTITY = "block_entity"
+# A holiday calendar (on = holiday) or a workday binary sensor (on = working day).
+CONF_DAY_ENTITY = "day_entity"
+CONF_AGREED_POWER = "agreed_power_{}"  # one per block, in kW

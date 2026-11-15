@@ -43,4 +43,15 @@ async def async_get_config_entry_diagnostics(
         "last_interval": (
             tracker.last_interval.to_dict() if tracker.last_interval else None
         ),
+        "tariff": {
+            "block": tracker.current_block(now),
+            "block_source": tracker.block_source(),
+            "working_day": tracker.working_day(dt_util.as_local(now)),
+            "agreed_power_w": tracker.agreed_power,
+            "peak_month": tracker.peak_month,
+            "peaks": {
+                block: {"value": peak.value, "start": peak.start.isoformat()}
+                for block, peak in tracker.peaks.items()
+            },
+        },
     }

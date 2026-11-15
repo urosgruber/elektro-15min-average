@@ -1,0 +1,29 @@
+{
+  "entity": {
+    "sensor": {
+      "average": {
+        "default": "mdi:timer-outline"
+      },
+      "projected": {
+        "default": "mdi:chart-timeline-variant-shimmer"
+      },
+      "last_interval": {
+        "default": "mdi:history"
+      },
+      "tariff_block": {
+        "default": "mdi:numeric"
+      },
+      "monthly_peak": {
+        "default": "mdi:chart-bell-curve-cumulative"
+      }
+    },
+    "binary_sensor": {
+      "agreed_power_exceeded": {
+        "default": "mdi:flash-alert-outline",
+        "state": {
+          "off": "mdi:flash-outline"
+        }
+      }
+    }
+  }
+}
