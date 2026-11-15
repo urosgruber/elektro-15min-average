@@ -1,127 +1,149 @@
 # Elektro 15-Minute Average Power
 
-Custom Home Assistant integration that creates a sensor with a fixed 15-minute average of a power entity. Intervals are aligned to local time boundaries (00, 15, 30, 45).
+A Home Assistant integration that calculates the 15-minute average power of a
+power sensor. It uses fixed quarter hours (:00–:15, :15–:30, :30–:45,
+:45–:00), as the electricity meter does. The network tariff in Slovenia uses
+this value, and Moj Elektro shows it one day late. This integration shows it
+in real time.
 
-## Features
+## Sensors
 
-- Configurable source power sensor
-- Fixed 15-minute intervals aligned to quarter hours
-- Two average methods:
-  - Time-weighted (default): integrates values over time between samples. This is energy / time, which is what the electricity meter measures.
-  - Arithmetic: mean of samples
-- Optional import-only mode: negative values (export) count as 0 W
-- Attributes for min, max, last value, sample count, and interval boundaries
-- Restart detection flag to show potential partial intervals
+Each power sensor that you add gets one device with three sensors:
+
+| Sensor | What it shows |
+|---|---|
+| **15-minute average** | The average of the current quarter hour so far. |
+| **Projected 15-minute average** | The value that the current quarter hour ends at if the power stays as it is now. Use it to see where the value climbs to, and to react before the quarter hour ends. |
+| **Last 15-minute average** | The result of the last finished quarter hour. It keeps its value after a restart. |
+
+The first two sensors update on each change of the source and every 10
+seconds. The last sensor updates at :00, :15, :30 and :45.
+
+## How it calculates
+
+The meter divides the energy of the quarter hour by 15 minutes. The
+integration does the same from the power samples: each value holds until the
+next sample (a time-weighted average).
+
+An average of the samples (an arithmetic mean) gives a wrong result. A source
+sends more samples while the load changes, so these periods get too much
+weight. On a real install, the phase energy meters gave 1793 W for one
+quarter hour. The time-weighted average gave 1793 W. The arithmetic mean gave
+1598 W. The last sensor shows the arithmetic mean only as the attribute
+`arithmetic_average`, for comparison.
+
+**Projected value:** the energy measured so far, plus the latest power for the
+rest of the quarter hour, divided by 15 minutes. At the end of the quarter
+hour, it equals the average.
+
+**Grid import only:** a grid sensor with solar is negative during export. The
+meter's import register does not count export. Turn on **Count only grid
+import**, and negative values count as 0 W.
+
+**Restarts:** the integration saves its state. After a restart, it continues
+the current quarter hour. It does not count the time while Home Assistant was
+down. The attribute `restart_detected` is then true, and `coverage` shows the
+measured share of the quarter hour. If the saved quarter hour already ended,
+the integration starts with the next one.
 
 ## Installation (HACS)
 
-1. Add `https://github.com/urosgruber/elektro-15min-average` as a custom repository in HACS (Integration).
-2. Install the integration.
+1. In HACS, add `https://github.com/urosgruber/elektro-15min-average` as a
+   custom repository of the type **Integration**.
+2. Install **Elektro 15-Minute Average Power**.
 3. Restart Home Assistant.
-4. Add the integration via Settings -> Devices & Services.
+4. Go to **Settings → Devices & services → Add integration** and select
+   **Elektro 15-Minute Average Power**.
+
+Home Assistant 2026.2 or newer is necessary.
 
 ## Configuration
 
-During setup you can choose:
+| Field | Description |
+|---|---|
+| Power sensor | A sensor in W or kW. For the grid, use the power at the meter. |
+| Name | Optional. The default is the name of the power sensor. |
+| Count only grid import | Negative values count as 0 W. Use it for a net grid sensor with solar. |
 
-- Source power entity (W)
-- Optional name
-- Average method (time-weighted or arithmetic)
-- Import only: count negative values as 0 W. Use it when the source is a net grid power sensor that goes negative during export (solar).
-- Optional finalized-only sensor (updates only at 15-minute boundaries)
-- Optional entity picture URL (defaults to the bundled icon)
+You can change **Count only grid import** later in **Configure**.
 
 ## Attributes
 
-- `average_method`
-- `arithmetic_average`
-- `time_weighted_average`
-- `interval_start`
-- `interval_end`
-- `sample_count`
-- `min_value`
-- `max_value`
-- `last_value`
-- `source_entity`
-- `import_only`
-- `restart_detected`
-- `restart_at`
+**15-minute average:** `interval_start`, `interval_end`, `coverage`,
+`sample_count`, `min_value`, `max_value`, `last_value`, `restart_detected`,
+`source_entity`, `import_only`. The recorder does not store the attributes
+that change with each sample.
 
-## Arithmetic vs time-weighted
+**Projected 15-minute average:** `interval_end`.
 
-Time-weighted treats the last value as holding until the next update and averages over time. The result equals the energy in the interval divided by 15 minutes, which is how the meter (and Moj Elektro) computes the 15-minute power.
+**Last 15-minute average:** `interval_start`, `interval_end`, `coverage`,
+`sample_count`, `min_value`, `max_value`, `arithmetic_average`,
+`restart_detected`.
 
-Arithmetic uses the mean of received samples. A source that reports more often while the load changes gets more weight in those periods, so the result can be wrong by 10 % or more. Example from a real install: the energy meters gave 1793 W, time-weighted 1793 W, arithmetic 1598 W.
+## Dashboard examples
 
-## Notes
-
-- The integration updates the sensor on each source change and on each 15-minute boundary.
-- The optional finalized-only sensor only updates at the boundary for discrete history points.
-- Averages are rounded to whole watts.
-- If Home Assistant restarts mid-interval, `restart_detected` is set to true for that interval. The time while Home Assistant was down is not counted. If the stored interval already ended, it is dropped.
-- The live sensor's time-weighted value includes the time since the last source update.
-- By default, the integration serves a bundled icon at `/api/elektro_15min_average/static/icon.png`.
-- To use a local PNG, place it in `/config/www/` and reference it as `/local/<filename>.png` in the options.
-
-## Logging
-
-To enable debug logging for this integration, add:
+A gauge of the projected value:
 
 ```yaml
-logger:
-  default: info
-  logs:
-    custom_components.elektro_15min_average: debug
+type: gauge
+entity: sensor.grid_projected_15_minute_average
+min: 0
+max: 11000
+severity:
+  green: 0
+  yellow: 6000
+  red: 9000
 ```
 
-## Local development (Podman)
-
-1. Run `bash scripts/podman-run.sh`.
-2. Open `http://localhost:8123` and complete onboarding.
-3. Add the integration via Settings -> Devices & Services.
-
-Notes:
-
-- The script creates a local `ha-config/` folder (gitignored).
-- Code changes are picked up via integration reload or container restart.
-
-## Release checklist
-
-- Update the version in `custom_components/elektro_15min_average/manifest.json`.
-- Tag the commit (e.g., `v0.1.0`) and create a GitHub release.
-- Update `README.md` if any usage details changed.
-
-## Lovelace
-
-For a bar-style view, try a statistics graph with 15-minute periods (example):
+A bar chart of the finished quarter hours:
 
 ```yaml
 type: statistics-graph
 entities:
-  - sensor.your_15min_average
+  - sensor.grid_last_15_minute_average
 stat_types:
-  - mean
-period: 15minute
+  - max
+period: 5minute
+chart_type: bar
 ```
 
-If you prefer a live running value and attributes, a simple entities card works well:
+## Upgrade from version 0.x
+
+Version 1.0 migrates the entries on start:
+
+- The average is always time-weighted. The options **Average method**,
+  **Create finalized-only sensor** and **Entity picture** are removed.
+- Each entry gets all three sensors. The entity IDs of the existing sensors
+  stay the same. The new sensor is the projected value.
+- The integration shows its own brand icon.
+
+## Development
+
+```bash
+uv sync
+uv run ruff check . && uv run ruff format --check .
+uv run pytest -q -W error
+```
+
+`bash scripts/podman-run.sh` starts a local Home Assistant in Podman with the
+integration mounted.
+
+## Icon
+
+The integration ships its own icon in
+`custom_components/elektro_15min_average/brand/`. It is an original drawing.
+Run `uv run --with pillow python scripts/make_icon.py` to draw it again.
+
+## Release checklist
+
+1. Update the version in `manifest.json` and `pyproject.toml`.
+2. Run the tests and ruff.
+3. Tag the commit (for example `v1.0.0`) and create a GitHub release.
+
+## Logging
 
 ```yaml
-type: entities
-entities:
-  - entity: sensor.your_15min_average
-    name: 15-minute average
+logger:
+  logs:
+    custom_components.elektro_15min_average: debug
 ```
-
-## Tests
-
-Run `python3 -I tests/test_averager.py custom_components`. It uses stub Home Assistant modules.
-
-## Manual test checklist
-
-- Create the integration, pick a power sensor, and verify the new sensor updates on each source change.
-- At a quarter-hour boundary, confirm the interval flips and `interval_start`/`interval_end` move to the next window.
-- Compare arithmetic vs time-weighted by forcing irregular updates (e.g., rapid changes followed by a pause).
-- Restart Home Assistant mid-interval and confirm `restart_detected` becomes true and the interval continues.
-- Enable the finalized-only sensor and verify it only updates at quarter-hour boundaries.
-- Confirm the bundled icon shows in the entity list, then set a custom entity picture URL and verify it overrides.

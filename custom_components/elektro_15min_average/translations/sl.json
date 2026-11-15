@@ -1,0 +1,52 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "15-minutna povprečna moč",
+        "description": "Izračuna 15-minutno povprečno moč senzorja moči, v fiksnih četrturnih intervalih (:00, :15, :30, :45), tako kot števec električne energije.",
+        "data": {
+          "source_entity": "Senzor moči",
+          "name": "Ime",
+          "import_only": "Štej samo prevzem iz omrežja"
+        },
+        "data_description": {
+          "source_entity": "Senzor v W ali kW. Za omrežje uporabite moč na števcu.",
+          "name": "Neobvezno. Privzeto je ime senzorja moči.",
+          "import_only": "Vklopite, če je senzor med oddajo v omrežje (sončna elektrarna) negativen. Negativne vrednosti se potem štejejo kot 0 W."
+        }
+      }
+    },
+    "error": {
+      "unsupported_unit": "Senzor mora biti v W ali kW."
+    },
+    "abort": {
+      "already_configured": "Ta senzor moči že ima 15-minutno povprečje."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "15-minutna povprečna moč",
+        "data": {
+          "import_only": "Štej samo prevzem iz omrežja"
+        },
+        "data_description": {
+          "import_only": "Vklopite, če je senzor med oddajo v omrežje (sončna elektrarna) negativen. Negativne vrednosti se potem štejejo kot 0 W."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "average": {
+        "name": "15-minutno povprečje"
+      },
+      "projected": {
+        "name": "Predvideno 15-minutno povprečje"
+      },
+      "last_interval": {
+        "name": "Zadnje 15-minutno povprečje"
+      }
+    }
+  }
+}

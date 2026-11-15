@@ -1,64 +1,108 @@
-"""Averaging tests with stub Home Assistant modules.
+"""Tests of the interval arithmetic, without Home Assistant running."""
 
-Run: python3 -I tests/test_averager.py custom_components
-"""
-import sys, types, asyncio
-from datetime import datetime, timedelta, timezone
-UTC = timezone.utc
-NOW = [datetime(2026, 11, 15, 16, 7, tzinfo=UTC)]
-def mod(name, **kw):
-    m = types.ModuleType(name); m.__dict__.update(kw); sys.modules[name] = m; return m
-class Dummy:
-    def __init__(self, *a, **k): pass
-    def __getattr__(self, n): return Dummy()
-dt_util = types.SimpleNamespace(
-    utcnow=lambda: NOW[0], as_utc=lambda d: d.astimezone(UTC), as_local=lambda d: d,
-    parse_datetime=lambda s: datetime.fromisoformat(s))
-STORE = {}
-class Store:
-    def __init__(self, hass, v, key): self.key = key
-    async def async_load(self): return STORE.get(self.key)
-    async def async_save(self, d): STORE[self.key] = d
-for n in ["homeassistant","homeassistant.components","homeassistant.helpers","homeassistant.util"]: mod(n)
-mod("homeassistant.components.sensor", SensorDeviceClass=Dummy(), SensorEntity=object, SensorStateClass=Dummy())
-mod("homeassistant.config_entries", ConfigEntry=object)
-mod("homeassistant.const", UnitOfPower=Dummy())
-mod("homeassistant.core", HomeAssistant=object, callback=lambda f: f)
-mod("homeassistant.helpers.event", async_track_state_change_event=None, async_track_time_change=None)
-mod("homeassistant.helpers.storage", Store=Store)
-sys.modules["homeassistant.util"].dt = dt_util
-sys.path.insert(0, sys.argv[1])
-import importlib
-pkg = types.ModuleType("e15"); pkg.__path__ = [sys.argv[1] + "/elektro_15min_average"]; sys.modules["e15"] = pkg
-s = importlib.import_module("e15.sensor")
+from datetime import UTC, datetime, timedelta
 
-t0 = datetime(2026, 11, 15, 16, 0, tzinfo=UTC)
-a = s.IntervalAverager(None, "x")
-a.add_sample(500, t0)
-a.add_sample(2500, t0 + timedelta(minutes=5))
-live = a.current_averages(until=t0 + timedelta(minutes=10))
-assert round(live.time_weighted) == 1500, live           # (500*5 + 2500*5)/10
-fin = a.finalize_until(t0 + timedelta(minutes=15))
-assert round(fin.averages.time_weighted) == 1833, fin.averages   # (500*5+2500*10)/15
-assert fin.averages.arithmetic == 1500
-# Next interval carries the last value from the boundary.
-a.add_sample(1000, t0 + timedelta(minutes=20))
-assert round(a.current_averages(until=t0+timedelta(minutes=25)).time_weighted) == 1750  # (2500*5+1000*5)/10
-# until is capped at the interval end
-assert round(a.current_averages(until=t0+timedelta(hours=2)).time_weighted) == round((2500*300+1000*600)/900)
+import pytest
 
-# Restore: a finished interval is dropped.
-asyncio.run(a.async_save())
-NOW[0] = t0 + timedelta(hours=3)
-b = s.IntervalAverager(None, "x")
-assert asyncio.run(b.async_restore()) is False and b.interval_start is None
-# Restore inside the same interval: data kept, downtime not weighted.
-NOW[0] = t0 + timedelta(minutes=26)
-c = s.IntervalAverager(None, "x")
-assert asyncio.run(c.async_restore()) is True
-assert c.last_sample_ts is None and c.restart_detected
-c.add_sample(200, t0 + timedelta(minutes=28))   # 25→28 downtime must not count
-fin = c.finalize_until(t0 + timedelta(minutes=30))
-exp = (2500*300 + 200*120) / 420   # only measured time counts
-assert round(fin.averages.time_weighted) == round(exp), (fin.averages, exp)
-print("all tests passed")
+from custom_components.elektro_15min_average.averager import (
+    FinishedInterval,
+    IntervalAverager,
+)
+
+T0 = datetime(2026, 11, 15, 16, 0, tzinfo=UTC)
+
+
+def m(minutes: float) -> datetime:
+    return T0 + timedelta(minutes=minutes)
+
+
+def test_time_weighted_average_equals_energy_over_time() -> None:
+    a = IntervalAverager()
+    a.add_sample(500, m(0))
+    a.add_sample(2500, m(5))
+    assert a.average(m(10)) == pytest.approx(1500)
+    finished = a.finalize_until(m(15))
+    assert finished is not None
+    assert finished.average == pytest.approx((500 * 5 + 2500 * 10) / 15)
+    assert finished.arithmetic == pytest.approx(1500)
+    assert finished.coverage == pytest.approx(1.0)
+
+
+def test_many_samples_do_not_get_more_weight() -> None:
+    """The flaw of the arithmetic mean: a burst of samples skews it."""
+    a = IntervalAverager()
+    a.add_sample(400, m(0))
+    for i in range(20):  # 20 samples in the last minute
+        a.add_sample(3000, m(14 + i / 20))
+    finished = a.finalize_until(m(15))
+    assert finished.average == pytest.approx((400 * 14 + 3000 * 1) / 15)
+    assert finished.arithmetic > 2800
+
+
+def test_projected_holds_the_latest_power() -> None:
+    a = IntervalAverager()
+    a.add_sample(1000, m(0))
+    a.add_sample(3000, m(5))
+    assert a.projected(m(5)) == pytest.approx((1000 * 5 + 3000 * 10) / 15)
+    assert a.projected(m(10)) == pytest.approx((1000 * 5 + 3000 * 10) / 15)
+    a.add_sample(0, m(10))
+    assert a.projected(m(10)) == pytest.approx((1000 * 5 + 3000 * 5) / 15)
+
+
+def test_projected_equals_average_at_the_end() -> None:
+    a = IntervalAverager()
+    a.add_sample(1200, m(0))
+    a.add_sample(300, m(7))
+    assert a.projected(m(15)) == pytest.approx(a.average(m(15)))
+
+
+def test_value_carries_into_the_next_interval() -> None:
+    a = IntervalAverager()
+    a.add_sample(2500, m(0))
+    a.finalize_until(m(15))
+    # At the boundary the carried power shows, not unknown.
+    assert a.average(m(15)) == 2500
+    a.add_sample(1000, m(20))
+    assert a.average(m(25)) == pytest.approx((2500 * 5 + 1000 * 5) / 10)
+
+
+def test_restore_drops_an_ended_interval() -> None:
+    a = IntervalAverager()
+    a.add_sample(800, m(0))
+    data = a.to_dict()
+    b = IntervalAverager()
+    assert b.restore(data, m(16)) is False
+    assert b.interval_start is None
+
+
+def test_restore_does_not_count_the_downtime() -> None:
+    a = IntervalAverager()
+    a.add_sample(2500, m(0))
+    a.add_sample(1000, m(5))
+    data = a.to_dict()  # saved at minute 5
+    b = IntervalAverager()
+    assert b.restore(data, m(8)) is True
+    assert b.restart_detected
+    b.add_sample(200, m(10))  # minutes 5 to 10 are unknown
+    finished = b.finalize_until(m(15))
+    assert finished.average == pytest.approx((2500 * 5 + 200 * 5) / 10)
+    assert finished.coverage == pytest.approx(10 / 15)
+    assert finished.restart_detected
+
+
+def test_long_gap_starts_a_fresh_interval() -> None:
+    a = IntervalAverager()
+    a.add_sample(900, m(0))
+    finished = a.finalize_until(m(50))
+    assert finished.start == m(0)
+    assert a.interval_start == m(45)
+    # The power during the gap is unknown, so nothing is held.
+    assert a.last_sample_ts is None
+
+
+def test_finished_interval_round_trip() -> None:
+    a = IntervalAverager()
+    a.add_sample(700, m(0))
+    finished = a.finalize_until(m(15))
+    assert FinishedInterval.from_dict(finished.to_dict()) == finished
+    assert FinishedInterval.from_dict({}) is None

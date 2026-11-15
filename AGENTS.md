@@ -15,27 +15,27 @@ keep future iterations consistent, safe, and aligned with HA standards.
   and `async_track_state_change_event` / `async_track_time_interval`.
 
 ## Core Behavior (Do Not Regress)
-- The sensor computes fixed 15-minute interval averages aligned to wall-clock
-  quarter-hour boundaries (00, 15, 30, 45).
-- Source sensor is configurable; unit is watts (W).
-- Two averaging methods are supported: arithmetic and time-weighted.
-- The current interval value updates on source changes; the interval result is
-  discrete once the boundary passes.
-- Restarts should restore partial interval state and mark the interval as
-  potentially inaccurate if a restart happened.
+- Fixed 15-minute intervals aligned to local quarter hours (00, 15, 30, 45).
+- The average is time-weighted (energy / time), as the meter measures it. Do
+  not bring back the arithmetic mean as the state; it is wrong for sources
+  that report at an uneven rate. It stays only as an attribute.
+- Three sensors per entry: current average, projected value, last interval.
+  The current and projected values update on source changes and every 10 s.
+  None of them may show `unknown` while the source has a value.
+- `import_only` counts negative source values as 0 W (grid export).
+- Restarts restore the current interval, do not count the downtime, and drop
+  a stored interval that already ended. The last interval is stored too.
 
 ## File-Level Expectations
-- `custom_components/elektro_15min_average/sensor.py`: keep averaging logic,
-  boundary scheduling, and persistence here. Favor clear, testable helpers.
-- `custom_components/elektro_15min_average/config_flow.py`: add new options
-  via options flow, keep the config entry stable (no breaking fields).
-- `custom_components/elektro_15min_average/const.py`: store new constants here.
-- `custom_components/elektro_15min_average/manifest.json`: bump version on any
-  user-visible change; keep documentation/issue URLs pointing to the repo.
-- `custom_components/elektro_15min_average/strings.json` and
-  `custom_components/elektro_15min_average/translations/en.json`: update UI
-  text and option labels whenever new config fields are added.
-- `README.md`: update behavior, attributes, config, and release checklist.
+- `averager.py`: the interval arithmetic, no Home Assistant state. Test it in
+  `tests/test_averager.py`.
+- `tracker.py`: source subscription, boundary and tick timers, storage.
+- `sensor.py`: the three entities; they only read from the tracker.
+- `config_flow.py`, `__init__.py` (setup and config entry migration),
+  `diagnostics.py`, `strings.json` and `translations/` (en, sl).
+- `brand/` holds the icon; `scripts/make_icon.py` draws it.
+- Run `uv run ruff check .`, `uv run ruff format --check .` and
+  `uv run pytest -q -W error` before each commit.
 
 ## Data Integrity & Backwards Compatibility
 - Do not rename `unique_id` formats or entity_id patterns; add new attributes
@@ -47,7 +47,6 @@ keep future iterations consistent, safe, and aligned with HA standards.
 ## UI & Attributes
 - Keep attributes useful for diagnostics: interval start/end, min/max, samples,
   method, and restart markers. If adding new attributes, document them.
-- If adding new sensors, ensure they are optional and do not clutter by default.
 
 ## Quality Bar
 - Prefer readable, well-structured code with small helpers and minimal state.

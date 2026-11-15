@@ -1,6 +1,5 @@
 {
   "name": "Elektro 15-Minute Average Power",
-  "content_in_root": false,
-  "domains": ["elektro_15min_average"],
+  "homeassistant": "2026.2.0",
   "render_readme": true
 }

@@ -1,0 +1,35 @@
+[project]
+name = "elektro-15min-average"
+version = "1.0.0"
+description = "Home Assistant integration: fixed 15-minute average power, like the electricity meter"
+requires-python = ">=3.14.2"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest-homeassistant-custom-component==0.13.375",
+    "pytest-asyncio",
+    "ruff==0.17.4",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 88
+extend-exclude = [".venv", "ha-config"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+known-first-party = ["custom_components"]
+combine-as-imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["."]
+filterwarnings = [
+    "error",
+    "ignore::aiohttp.web_exceptions.NotAppKeyWarning",
+]

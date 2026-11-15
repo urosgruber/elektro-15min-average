@@ -2,29 +2,50 @@
   "config": {
     "step": {
       "user": {
-        "title": "Elektro 15-minute average power",
-        "description": "Create a 15-minute average sensor from a power entity.",
+        "title": "15-minute average power",
+        "description": "Calculates the 15-minute average power of a power sensor, in fixed quarter hours (:00, :15, :30, :45), as the electricity meter does.",
         "data": {
-          "source_entity": "Source power sensor",
-          "name": "Name (optional)",
-          "average_method": "Average method",
-          "import_only": "Count only grid import (negative values count as 0 W)",
-          "create_final_sensor": "Create finalized-only sensor",
-          "entity_picture": "Entity picture URL (optional, defaults to bundled icon)"
+          "source_entity": "Power sensor",
+          "name": "Name",
+          "import_only": "Count only grid import"
+        },
+        "data_description": {
+          "source_entity": "A sensor in W or kW. For the grid, use the power at the meter.",
+          "name": "Optional. The default is the name of the power sensor.",
+          "import_only": "Turn on when the sensor is negative during export (solar). Negative values then count as 0 W."
         }
       }
+    },
+    "error": {
+      "unsupported_unit": "The sensor must be in W or kW."
+    },
+    "abort": {
+      "already_configured": "This power sensor already has a 15-minute average."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Elektro 15-minute average power",
+        "title": "15-minute average power",
         "data": {
-          "average_method": "Average method",
-          "import_only": "Count only grid import (negative values count as 0 W)",
-          "create_final_sensor": "Create finalized-only sensor",
-          "entity_picture": "Entity picture URL (optional, defaults to bundled icon)"
+          "import_only": "Count only grid import"
+        },
+        "data_description": {
+          "import_only": "Turn on when the sensor is negative during export (solar). Negative values then count as 0 W."
         }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "average": {
+        "name": "15-minute average"
+      },
+      "projected": {
+        "name": "Projected 15-minute average"
+      },
+      "last_interval": {
+        "name": "Last 15-minute average"
       }
     }
   }

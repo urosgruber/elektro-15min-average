@@ -1,131 +1,107 @@
-"""Config flow for Elektro 15-minute power average."""
+"""Config flow of the Elektro 15-minute average integration."""
 
 from __future__ import annotations
 
 from typing import Any
 
-import voluptuous as vol
-
-from homeassistant import config_entries
+from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlowWithReload,
+)
+from homeassistant.const import UnitOfPower
 from homeassistant.core import callback
 from homeassistant.helpers import selector
+import voluptuous as vol
 
+from . import source_name
 from .const import (
-    CONF_FINAL_SENSOR,
-    CONF_ENTITY_PICTURE,
     CONF_IMPORT_ONLY,
-    CONF_METHOD,
     CONF_NAME,
     CONF_SOURCE_ENTITY,
-    DEFAULT_FINAL_SENSOR,
-    DEFAULT_ENTITY_PICTURE,
     DEFAULT_IMPORT_ONLY,
-    DEFAULT_METHOD,
     DOMAIN,
-    METHOD_ARITHMETIC,
-    METHOD_TIME_WEIGHTED,
 )
 
+SUPPORTED_UNITS = {UnitOfPower.WATT, UnitOfPower.KILO_WATT}
 
-def _method_selector() -> selector.SelectSelector:
-    # Keep labels user-facing while stored values stay stable for compatibility.
-    return selector.SelectSelector(
-        selector.SelectSelectorConfig(
-            options=[
-                {
-                    "value": METHOD_TIME_WEIGHTED,
-                    "label": "Time-weighted (energy / time, like the meter)",
-                },
-                {"value": METHOD_ARITHMETIC, "label": "Arithmetic (average of samples)"},
-            ],
-            mode=selector.SelectSelectorMode.DROPDOWN,
-        )
-    )
+_IMPORT_ONLY = selector.BooleanSelector()
 
 
-class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for the integration."""
+class ElektroAverageConfigFlow(ConfigFlow, domain=DOMAIN):
+    """Add a 15-minute average for one power sensor."""
 
-    VERSION = 1
+    VERSION = 2
 
-    async def async_step_user(self, user_input: dict[str, Any] | None = None):
-        """Handle the initial step."""
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
         if user_input is not None:
-            source_entity = user_input[CONF_SOURCE_ENTITY]
-            # Use the source entity as a stable unique_id to avoid duplicates.
-            await self.async_set_unique_id(source_entity)
+            source = user_input[CONF_SOURCE_ENTITY]
+            await self.async_set_unique_id(source)
             self._abort_if_unique_id_configured()
-            return self.async_create_entry(title=source_entity, data=user_input)
+            state = self.hass.states.get(source)
+            unit = state.attributes.get("unit_of_measurement") if state else None
+            if unit is not None and unit not in SUPPORTED_UNITS:
+                errors[CONF_SOURCE_ENTITY] = "unsupported_unit"
+            else:
+                name = (user_input.get(CONF_NAME) or "").strip() or source_name(
+                    self.hass, source
+                )
+                return self.async_create_entry(
+                    title=name,
+                    data={CONF_SOURCE_ENTITY: source, CONF_NAME: name},
+                    options={
+                        CONF_IMPORT_ONLY: user_input.get(
+                            CONF_IMPORT_ONLY, DEFAULT_IMPORT_ONLY
+                        )
+                    },
+                )
 
-        data_schema = vol.Schema(
+        schema = vol.Schema(
             {
                 vol.Required(CONF_SOURCE_ENTITY): selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain="sensor")
+                    selector.EntitySelectorConfig(
+                        domain="sensor", device_class=SensorDeviceClass.POWER
+                    )
                 ),
-                vol.Optional(CONF_NAME): str,
-                vol.Optional(CONF_METHOD, default=DEFAULT_METHOD): _method_selector(),
-                # Count negative values (export) as 0 W, like the meter's import register.
+                vol.Optional(CONF_NAME): selector.TextSelector(),
                 vol.Optional(
                     CONF_IMPORT_ONLY, default=DEFAULT_IMPORT_ONLY
-                ): selector.BooleanSelector(),
-                # Optional finalized-only sensor for discrete interval history.
-                vol.Optional(
-                    CONF_FINAL_SENSOR, default=DEFAULT_FINAL_SENSOR
-                ): selector.BooleanSelector(),
-                vol.Optional(
-                    CONF_ENTITY_PICTURE, default=DEFAULT_ENTITY_PICTURE
-                ): str,
+                ): _IMPORT_ONLY,
             }
         )
-
-        return self.async_show_form(step_id="user", data_schema=data_schema)
+        return self.async_show_form(
+            step_id="user",
+            data_schema=self.add_suggested_values_to_schema(schema, user_input),
+            errors=errors,
+        )
 
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry: config_entries.ConfigEntry):
-        """Return the options flow."""
-        return OptionsFlow(config_entry)
+    def async_get_options_flow(entry: ConfigEntry) -> ElektroAverageOptionsFlow:
+        return ElektroAverageOptionsFlow()
 
 
-class OptionsFlow(config_entries.OptionsFlow):
-    """Handle options for the integration."""
+class ElektroAverageOptionsFlow(OptionsFlowWithReload):
+    """Change the import-only setting."""
 
-    def __init__(self, entry: config_entries.ConfigEntry) -> None:
-        self._entry = entry
-
-    async def async_step_init(self, user_input: dict[str, Any] | None = None):
-        """Manage the options."""
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
-
-        options = self._entry.options
-
-        data_schema = vol.Schema(
+            return self.async_create_entry(data=user_input)
+        schema = vol.Schema(
             {
                 vol.Optional(
-                    CONF_METHOD, default=options.get(CONF_METHOD, DEFAULT_METHOD)
-                ): _method_selector(),
-                vol.Optional(
                     CONF_IMPORT_ONLY,
-                    default=options.get(
-                        CONF_IMPORT_ONLY,
-                        self._entry.data.get(CONF_IMPORT_ONLY, DEFAULT_IMPORT_ONLY),
+                    default=self.config_entry.options.get(
+                        CONF_IMPORT_ONLY, DEFAULT_IMPORT_ONLY
                     ),
-                ): selector.BooleanSelector(),
-                vol.Optional(
-                    CONF_FINAL_SENSOR,
-                    default=options.get(CONF_FINAL_SENSOR, DEFAULT_FINAL_SENSOR),
-                ): selector.BooleanSelector(),
-                vol.Optional(
-                    CONF_ENTITY_PICTURE,
-                    default=options.get(
-                        CONF_ENTITY_PICTURE,
-                        self._entry.data.get(
-                            CONF_ENTITY_PICTURE, DEFAULT_ENTITY_PICTURE
-                        ),
-                    ),
-                ): str,
+                ): _IMPORT_ONLY,
             }
         )
-
-        return self.async_show_form(step_id="init", data_schema=data_schema)
+        return self.async_show_form(step_id="init", data_schema=schema)
