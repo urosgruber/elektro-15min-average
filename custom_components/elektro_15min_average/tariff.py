@@ -7,6 +7,7 @@ day, one digit per hour from 00:00.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import date, datetime, timedelta
 
 # Valid up to the end of 2026.
@@ -44,6 +45,11 @@ _FIXED_HOLIDAYS = {
 }
 
 BLOCKS = (1, 2, 3, 4, 5)
+
+# The cheap blocks, and how far the forward walk looks.
+CHEAP_BLOCKS = (3, 4, 5)
+_STEP = timedelta(minutes=15)
+_HORIZON = timedelta(hours=48)
 
 
 def easter_sunday(year: int) -> date:
@@ -94,6 +100,60 @@ def block_at(local: datetime, working_day: bool | None = None) -> int:
     )
     hours = schedule[(is_high_season(day), not working_day)]
     return int(hours[local.hour])
+
+
+def _walk(
+    local: datetime, working_day: Callable[[date], bool] | None
+) -> tuple[int, list[tuple[datetime, int]]]:
+    """Return the block now and every block start in the next 48 hours.
+
+    The walk goes in 15-minute steps from the quarter hour of local. A day
+    that working_day does not know uses the built-in holiday list.
+    """
+
+    def block(moment: datetime) -> int:
+        day_type = working_day(moment.date()) if working_day else None
+        return block_at(moment, day_type)
+
+    start = local.replace(minute=local.minute // 15 * 15, second=0, microsecond=0)
+    current = block(start)
+    previous = current
+    starts: list[tuple[datetime, int]] = []
+    moment = start
+    while moment - start < _HORIZON:
+        moment += _STEP
+        value = block(moment)
+        if value != previous:
+            starts.append((moment, value))
+            previous = value
+    return current, starts
+
+
+def next_change(
+    local: datetime, working_day: Callable[[date], bool] | None = None
+) -> tuple[datetime, int] | None:
+    """Return the start and the block of the next block change.
+
+    local is a local date and time. working_day tells whether a date is a
+    working day, like the working-day source of the sensor. The result is
+    None when the block does not change within 48 hours.
+    """
+    _, starts = _walk(local, working_day)
+    return starts[0] if starts else None
+
+
+def next_cheap_start(
+    local: datetime, working_day: Callable[[date], bool] | None = None
+) -> datetime | None:
+    """Return the start of the next block 3, 4 or 5 period.
+
+    The result is None when the block is already 3, 4 or 5, and when no cheap
+    period starts within 48 hours.
+    """
+    current, starts = _walk(local, working_day)
+    if current in CHEAP_BLOCKS:
+        return None
+    return next((moment for moment, value in starts if value in CHEAP_BLOCKS), None)
 
 
 def parse_block(text: str | None) -> int | None:

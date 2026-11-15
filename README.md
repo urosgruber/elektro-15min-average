@@ -124,6 +124,15 @@ calendar or workday sensor, and the tariff block entity.
 `source_entity`, `import_only`. The recorder does not store the attributes
 that change with each sample.
 
+**Tariff block:** `source`, `high_season`, `working_day`, `agreed_power`,
+`next_change` (local ISO time of the next block change), `next_block` (the
+block from then on) and `next_cheap_start` (local ISO time when the next
+block 3, 4 or 5 period starts; empty when the block is already 3, 4 or 5).
+They look 48 hours ahead with the built-in tables. The holiday calendar or
+workday sensor counts for today only; other days use the built-in holiday
+list. A tariff block entity changes only the current block, not these
+forecasts.
+
 **Projected 15-minute average:** `interval_end`.
 
 **Last 15-minute average:** `interval_start`, `interval_end`, `coverage`,

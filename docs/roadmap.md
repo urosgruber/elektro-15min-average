@@ -1,5 +1,9 @@
 # Roadmap
 
+## Done in 1.1.0
+
+- Tariff block attributes `next_change`, `next_block` and `next_cheap_start`.
+
 ## Done in 1.0.0
 
 - Agreed-power warning per tariff block (binary sensor on the projected value).

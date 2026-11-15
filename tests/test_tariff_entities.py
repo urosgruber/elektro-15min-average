@@ -204,3 +204,21 @@ async def test_options_validate_agreed_power_order(hass: HomeAssistant) -> None:
         "day_entity": "calendar.slovenija",
     }
     assert entry.runtime_data.agreed_power == {1: 5000.0, 3: 7000.0}
+
+
+async def test_next_block_attributes(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    set_power(hass, 500)
+    await setup(hass)
+    attrs = state(hass, BLOCK).attributes
+    assert attrs["next_change"] == "2026-11-16T14:00:00+01:00"
+    assert attrs["next_block"] == 2
+    assert attrs["next_cheap_start"] == "2026-11-16T22:00:00+01:00"
+    # At 22:00 the block is 3: no next cheap start, next change at 06:00.
+    await move(hass, freezer, 14 * 60)
+    s = state(hass, BLOCK)
+    assert s.state == "3"
+    assert s.attributes["next_change"] == "2026-11-17T06:00:00+01:00"
+    assert s.attributes["next_block"] == 2
+    assert s.attributes["next_cheap_start"] is None

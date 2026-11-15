@@ -8,6 +8,8 @@ from custom_components.elektro_15min_average.tariff import (
     block_at,
     easter_sunday,
     is_working_day,
+    next_change,
+    next_cheap_start,
     parse_block,
 )
 
@@ -73,3 +75,59 @@ def test_working_day_override() -> None:
 )
 def test_parse_block(text: str, block: int | None) -> None:
     assert parse_block(text) == block
+
+
+def at(moment: str) -> datetime:
+    return datetime.fromisoformat(moment)
+
+
+@pytest.mark.parametrize(
+    ("now", "change", "block", "cheap"),
+    [
+        # 2026 table, winter working day: 7-14 b1, 14-16 b2, 16-20 b1, 20-22 b2.
+        ("2026-11-16 10:00", "2026-11-16 14:00", 2, "2026-11-16 22:00"),
+        # Block 2 at 21:00: block 3 starts at 22:00.
+        ("2026-11-16 21:00", "2026-11-16 22:00", 3, "2026-11-16 22:00"),
+        # Friday 21:00. Saturday is block 4 all night, but 22:00 comes first.
+        ("2026-11-20 21:00", "2026-11-20 22:00", 3, "2026-11-20 22:00"),
+        # 31 December 2026 still uses the 2026 table.
+        ("2026-12-31 21:00", "2026-12-31 22:00", 3, "2026-12-31 22:00"),
+        # From 2027: 06-12 b1, 12-17 b2, 17-20 b1, 20-22 b2.
+        ("2027-01-04 06:30", "2027-01-04 12:00", 2, "2027-01-04 22:00"),
+        # Late evening before the table switch: the change is after midnight.
+        ("2026-12-31 23:30", "2027-01-01 00:00", 4, None),
+    ],
+)
+def test_next_change_and_cheap_start(
+    now: str, change: str, block: int, cheap: str | None
+) -> None:
+    assert next_change(at(now)) == (at(change), block)
+    expected = None if cheap is None else at(cheap)
+    assert next_cheap_start(at(now)) == expected
+
+
+def test_next_cheap_start_across_table_switch() -> None:
+    assert next_cheap_start(at("2027-01-04 18:00")) == at("2027-01-04 22:00")
+
+
+def test_next_change_on_a_sunday() -> None:
+    # 2026 Sunday in high season, 00:00: block 4 until 06:00 (change to 3).
+    assert next_change(at("2026-11-15 00:00")) == (at("2026-11-15 06:00"), 3)
+
+
+def test_working_day_override_moves_the_change() -> None:
+    thursday = at("2026-11-19 16:00")
+    assert next_change(thursday) == (at("2026-11-19 20:00"), 2)
+    holiday = next_change(thursday, working_day=lambda day: False)
+    assert holiday == (at("2026-11-19 20:00"), 3)
+    cheap = next_cheap_start(thursday, working_day=lambda day: False)
+    assert cheap == at("2026-11-19 20:00")
+
+
+def test_next_cheap_start_ignores_a_cheap_block_now() -> None:
+    assert next_cheap_start(at("2026-11-16 23:00")) is None
+    assert next_cheap_start(at("2026-11-16 22:00")) is None
+
+
+def test_next_change_rounds_down_to_the_quarter() -> None:
+    assert next_change(at("2026-11-16 13:59:30")) == (at("2026-11-16 14:00"), 2)
