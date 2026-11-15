@@ -7,6 +7,7 @@ import pytest
 
 from custom_components.elektro_15min_average.tariff import (
     block_at,
+    day_blocks,
     easter_sunday,
     is_working_day,
     next_change,
@@ -153,3 +154,36 @@ def test_next_change_over_the_autumn_dst_change() -> None:
     assert change is not None
     assert change[0].isoformat() == "2026-10-25T06:00:00+01:00"
     assert change[1] == 4
+
+
+def ones(blocks: list[int]) -> list[int]:
+    return [i for i, block in enumerate(blocks) if block == 1]
+
+
+def test_day_blocks_2026_winter_working_day() -> None:
+    blocks = day_blocks(date(2026, 11, 16))
+    assert len(blocks) == 96
+    assert ones(blocks) == list(range(28, 56)) + list(range(64, 80))
+    assert blocks[0] == 3
+    assert blocks[24] == 2  # 06:00
+    assert blocks[88] == 3  # 22:00
+
+
+def test_day_blocks_2027_winter_working_day() -> None:
+    blocks = day_blocks(date(2027, 1, 4))
+    assert ones(blocks) == list(range(24, 48)) + list(range(68, 80))
+    assert blocks[48] == 2  # 12:00
+    assert blocks[80] == 2  # 20:00
+
+
+def test_day_blocks_weekend_and_override() -> None:
+    sunday = day_blocks(date(2026, 11, 15))
+    assert sunday[0] == 4
+    assert sunday[28] == 2
+    assert sunday == day_blocks(date(2026, 11, 16), working_day=False)
+    assert 1 not in sunday
+
+
+def test_day_blocks_have_96_entries_on_dst_days() -> None:
+    assert len(day_blocks(date(2026, 3, 29))) == 96
+    assert len(day_blocks(date(2026, 10, 25))) == 96

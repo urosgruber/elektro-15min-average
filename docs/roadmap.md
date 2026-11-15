@@ -1,5 +1,10 @@
 # Roadmap
 
+## Done in 1.2.0
+
+- Tariff block attributes `today_blocks` and `tomorrow_blocks` (96 blocks each),
+  for a 24-hour ring on a dashboard.
+
 ## Done in 1.1.1
 
 - The forecast attributes are empty when a tariff block entity sets the block.

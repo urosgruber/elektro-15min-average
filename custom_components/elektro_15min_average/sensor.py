@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -20,6 +20,7 @@ from . import ElektroAverageConfigEntry
 from .entity import AverageEntity
 from .tariff import (
     BLOCKS,
+    day_blocks,
     is_high_season,
     is_working_day,
     next_change,
@@ -156,6 +157,16 @@ class TariffBlockSensor(AverageEntity, SensorEntity):
 
     _attr_translation_key = "tariff_block"
     _unique_id_suffix = "_tariff_block"
+    # The forecasts and the day lists are large or change often.
+    _unrecorded_attributes = frozenset(
+        {
+            "next_change",
+            "next_block",
+            "next_cheap_start",
+            "today_blocks",
+            "tomorrow_blocks",
+        }
+    )
 
     @callback
     def _refresh(self) -> None:
@@ -174,7 +185,12 @@ class TariffBlockSensor(AverageEntity, SensorEntity):
         source = self._tracker.block_source()
         change = next_change(local, working_day) if source == "calculated" else None
         cheap = next_cheap_start(local, working_day) if source == "calculated" else None
+        calculated = source == "calculated"
+        today = local.date()
+        tomorrow = today + timedelta(days=1)
         self._attr_extra_state_attributes = {
+            "today_blocks": day_blocks(today, today_is_working) if calculated else None,
+            "tomorrow_blocks": day_blocks(tomorrow) if calculated else None,
             "next_change": change[0].isoformat() if change else None,
             "next_block": change[1] if change else None,
             "next_cheap_start": cheap.isoformat() if cheap else None,

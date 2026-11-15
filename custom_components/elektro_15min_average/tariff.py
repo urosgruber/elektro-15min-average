@@ -8,7 +8,7 @@ day, one digit per hour from 00:00.
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 
 # Valid up to the end of 2026.
 SCHEDULE_UNTIL_2026 = {
@@ -100,6 +100,22 @@ def block_at(local: datetime, working_day: bool | None = None) -> int:
     )
     hours = schedule[(is_high_season(day), not working_day)]
     return int(hours[local.hour])
+
+
+def day_blocks(day: date, working_day: bool | None = None) -> list[int]:
+    """Return the block of each quarter hour of a day, 00:00 first.
+
+    The list always has 96 entries, counted by the wall clock. On a day with
+    a DST change (23 or 25 hours) it is an approximation. working_day
+    overrides the built-in holiday list, like in block_at.
+    """
+    if working_day is None:
+        working_day = is_working_day(day)
+    return [
+        block_at(datetime.combine(day, time(hour, minute)), working_day)
+        for hour in range(24)
+        for minute in range(0, 60, 15)
+    ]
 
 
 def _walk(

@@ -152,6 +152,8 @@ async def test_block_entity_overrides(hass: HomeAssistant) -> None:
     assert attrs["next_change"] is None
     assert attrs["next_block"] is None
     assert attrs["next_cheap_start"] is None
+    assert attrs["today_blocks"] is None
+    assert attrs["tomorrow_blocks"] is None
     hass.states.async_set("select.block", "b2")
     await hass.async_block_till_done()
     assert state(hass, BLOCK).state == "2"
@@ -227,3 +229,24 @@ async def test_next_block_attributes(
     assert s.attributes["next_change"] == "2026-11-17T06:00:00+01:00"
     assert s.attributes["next_block"] == 2
     assert s.attributes["next_cheap_start"] is None
+
+
+async def test_day_block_attributes_refresh_at_midnight(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    set_power(hass, 500)
+    await setup(hass)
+    attrs = state(hass, BLOCK).attributes
+    assert len(attrs["today_blocks"]) == 96
+    assert attrs["today_blocks"][32] == 1  # Monday 08:00
+    assert attrs["tomorrow_blocks"][32] == 1  # Tuesday
+    # Friday 20 November 23:30 local: today is a working day, tomorrow is not.
+    await move(hass, freezer, 4 * 24 * 60 + 15.5 * 60)
+    attrs = state(hass, BLOCK).attributes
+    assert attrs["today_blocks"][32] == 1
+    assert attrs["tomorrow_blocks"][32] == 2
+    # After midnight, Saturday is today.
+    await move(hass, freezer, 60)
+    attrs = state(hass, BLOCK).attributes
+    assert attrs["today_blocks"][32] == 2
+    assert attrs["today_blocks"][0] == 4

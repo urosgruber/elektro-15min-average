@@ -130,7 +130,11 @@ block from then on) and `next_cheap_start` (local ISO time when the next
 block 3, 4 or 5 period starts; empty when the block is already 3, 4 or 5).
 They look 48 hours ahead with the built-in tables. The holiday calendar or
 workday sensor counts for today only; other days use the built-in holiday
-list. With a tariff block entity, all three are empty, because the tables
+list. `today_blocks` and `tomorrow_blocks` are lists of 96 blocks, one for
+each quarter hour of the day from 00:00, with the same rules (the holiday
+source counts for today only). They are counted by the wall clock, so a day
+with a DST change is an approximation. The recorder does not store these
+attributes. With a tariff block entity, all five are empty, because the tables
 cannot forecast an entity.
 
 **Projected 15-minute average:** `interval_end`.
