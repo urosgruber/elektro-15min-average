@@ -27,6 +27,7 @@ During setup you can choose:
 - Optional name
 - Average method (arithmetic or time-weighted)
 - Optional finalized-only sensor (updates only at 15-minute boundaries)
+- Optional entity picture URL (defaults to the bundled icon)
 
 ## Attributes
 
@@ -53,6 +54,8 @@ Arithmetic uses the mean of received samples. Time-weighted treats the last valu
 - The optional finalized-only sensor only updates at the boundary for discrete history points.
 - Averages are rounded to whole watts.
 - If Home Assistant restarts mid-interval, `restart_detected` is set to true for that interval.
+- By default, the integration serves a bundled icon at `/api/elektro_15min_average/static/icon.png`.
+- To use a local PNG, place it in `/config/www/` and reference it as `/local/<filename>.png` in the options.
 
 ## Logging
 
@@ -111,3 +114,4 @@ entities:
 - Compare arithmetic vs time-weighted by forcing irregular updates (e.g., rapid changes followed by a pause).
 - Restart Home Assistant mid-interval and confirm `restart_detected` becomes true and the interval continues.
 - Enable the finalized-only sensor and verify it only updates at quarter-hour boundaries.
+- Confirm the bundled icon shows in the entity list, then set a custom entity picture URL and verify it overrides.

@@ -12,10 +12,12 @@ from homeassistant.helpers import selector
 
 from .const import (
     CONF_FINAL_SENSOR,
+    CONF_ENTITY_PICTURE,
     CONF_METHOD,
     CONF_NAME,
     CONF_SOURCE_ENTITY,
     DEFAULT_FINAL_SENSOR,
+    DEFAULT_ENTITY_PICTURE,
     DEFAULT_METHOD,
     DOMAIN,
     METHOD_ARITHMETIC,
@@ -64,6 +66,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(
                     CONF_FINAL_SENSOR, default=DEFAULT_FINAL_SENSOR
                 ): selector.BooleanSelector(),
+                vol.Optional(
+                    CONF_ENTITY_PICTURE, default=DEFAULT_ENTITY_PICTURE
+                ): str,
             }
         )
 
@@ -98,6 +103,15 @@ class OptionsFlow(config_entries.OptionsFlow):
                     CONF_FINAL_SENSOR,
                     default=options.get(CONF_FINAL_SENSOR, DEFAULT_FINAL_SENSOR),
                 ): selector.BooleanSelector(),
+                vol.Optional(
+                    CONF_ENTITY_PICTURE,
+                    default=options.get(
+                        CONF_ENTITY_PICTURE,
+                        self._entry.data.get(
+                            CONF_ENTITY_PICTURE, DEFAULT_ENTITY_PICTURE
+                        ),
+                    ),
+                ): str,
             }
         )
 

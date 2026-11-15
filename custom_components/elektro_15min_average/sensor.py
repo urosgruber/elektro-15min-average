@@ -17,10 +17,12 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_FINAL_SENSOR,
+    CONF_ENTITY_PICTURE,
     CONF_METHOD,
     CONF_NAME,
     CONF_SOURCE_ENTITY,
     DEFAULT_FINAL_SENSOR,
+    DEFAULT_ENTITY_PICTURE,
     DEFAULT_METHOD,
     DOMAIN,
     METHOD_ARITHMETIC,
@@ -277,6 +279,10 @@ class PowerIntervalSensor(SensorEntity):
         self._method = entry.options.get(
             CONF_METHOD, entry.data.get(CONF_METHOD, DEFAULT_METHOD)
         )
+        entity_picture = entry.options.get(
+            CONF_ENTITY_PICTURE,
+            entry.data.get(CONF_ENTITY_PICTURE, DEFAULT_ENTITY_PICTURE),
+        )
         self._custom_name = entry.data.get(CONF_NAME)
 
         base_name = self._custom_name or self._default_name()
@@ -285,6 +291,8 @@ class PowerIntervalSensor(SensorEntity):
 
         self._attr_native_value: float | None = None
         self._attrs: dict[str, Any] = {}
+        if entity_picture:
+            self._attr_entity_picture = entity_picture
 
         self._unsub_state = None
         self._unsub_boundary = None

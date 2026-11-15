@@ -8,7 +8,8 @@
           "source_entity": "Source power sensor",
           "name": "Name (optional)",
           "average_method": "Average method",
-          "create_final_sensor": "Create finalized-only sensor"
+          "create_final_sensor": "Create finalized-only sensor",
+          "entity_picture": "Entity picture URL (optional, defaults to bundled icon)"
         }
       }
     }
@@ -19,7 +20,8 @@
         "title": "Elektro 15-minute average power",
         "data": {
           "average_method": "Average method",
-          "create_final_sensor": "Create finalized-only sensor"
+          "create_final_sensor": "Create finalized-only sensor",
+          "entity_picture": "Entity picture URL (optional, defaults to bundled icon)"
         }
       }
     }
